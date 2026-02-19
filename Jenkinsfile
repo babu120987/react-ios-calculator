@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    DOCKERHUB_USER = "DOCKERHUB_USER"
+    DOCKERHUB_USER = sarvah031220
     IMAGE_NAME = "react-ios-calculator"
     IMAGE_TAG = "${BUILD_NUMBER}"
     IMAGE = "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
