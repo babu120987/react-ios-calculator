@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-ios-calculator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: react-ios-calculator
+  template:
+    metadata:
+      labels:
+        app: react-ios-calculator
+    spec:
+      containers:
+        - name: web
+          image: sarvah031220/react-ios-calculator:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
