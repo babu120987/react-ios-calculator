@@ -2,60 +2,61 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "your-dockerhub-username/react-ios-calculator"
-        DOCKER_TAG = "latest"
+        IMAGE_NAME = "react-ios-calculator"
+        TEST_CONTAINER = "react-ios-test"
+        PROD_CONTAINER = "react-ios-app"
+        APP_PORT = "8080"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Build App') {
-            steps {
-                sh 'npm run build'
+                git branch: 'main',
+                    url: 'https://github.com/babu120987/react-ios-calculator.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                sh "docker build -t ${IMAGE_NAME}:latest ."
             }
         }
 
-        stage('Login to DockerHub') {
+        stage('Test Docker Container') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                }
+                sh """
+                docker stop ${TEST_CONTAINER} || true
+                docker rm ${TEST_CONTAINER} || true
+
+                docker run -d --name ${TEST_CONTAINER} -p 9090:80 ${IMAGE_NAME}:latest
+
+                sleep 5
+
+                curl -f http://localhost:9090
+
+                docker stop ${TEST_CONTAINER}
+                docker rm ${TEST_CONTAINER}
+                """
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Run Production Container') {
             steps {
-                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                sh """
+                docker stop ${PROD_CONTAINER} || true
+                docker rm ${PROD_CONTAINER} || true
+
+                docker run -d --name ${PROD_CONTAINER} -p ${APP_PORT}:80 ${IMAGE_NAME}:latest
+                """
             }
         }
-
     }
 
     post {
         always {
+            echo "Cleaning workspace..."
             cleanWs()
         }
     }
 }
-
