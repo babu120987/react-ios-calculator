@@ -5,7 +5,7 @@ pipeline {
         IMAGE_NAME = "react-ios-calculator"
         TEST_CONTAINER = "react-ios-test"
         PROD_CONTAINER = "react-ios-app"
-        APP_PORT = "8080"
+        APP_PORT = "8787"
     }
 
     stages {
