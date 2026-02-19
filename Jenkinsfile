@@ -2,10 +2,8 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "react-ios-calculator"
-        TEST_CONTAINER = "react-ios-test"
-        PROD_CONTAINER = "react-ios-app"
-        APP_PORT = "8787"
+        DOCKER_IMAGE = "babu120987/react-ios-calculator"
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -19,43 +17,46 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:latest ."
+                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Test Docker Container') {
+        stage('Login to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh "docker push ${DOCKER_IMAGE}:${IMAGE_TAG}"
+            }
+        }
+
+        stage('Update Kubernetes Deployment') {
             steps {
                 sh """
-                docker stop ${TEST_CONTAINER} || true
-                docker rm ${TEST_CONTAINER} || true
-
-                docker run -d --name ${TEST_CONTAINER} -p 9090:80 ${IMAGE_NAME}:latest
-
-                sleep 5
-
-                curl -f http://localhost:9090
-
-                docker stop ${TEST_CONTAINER}
-                docker rm ${TEST_CONTAINER}
+                kubectl set image deployment/react-ios-app \
+                react-ios-app=${DOCKER_IMAGE}:${IMAGE_TAG}
                 """
             }
         }
 
-        stage('Run Production Container') {
+        stage('Verify Rollout') {
             steps {
-                sh """
-                docker stop ${PROD_CONTAINER} || true
-                docker rm ${PROD_CONTAINER} || true
-
-                docker run -d --name ${PROD_CONTAINER} -p ${APP_PORT}:80 ${IMAGE_NAME}:latest
-                """
+                sh "kubectl rollout status deployment/react-ios-app"
             }
         }
     }
 
     post {
         always {
-            echo "Cleaning workspace..."
             cleanWs()
         }
     }
