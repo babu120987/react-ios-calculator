@@ -1,45 +1,61 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    DOCKERHUB_USER = "sarvah031220"
-    IMAGE_NAME = "react-ios-calculator"
-    IMAGE_TAG = "${BUILD_NUMBER}"
-    IMAGE = "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
-    LATEST = "${DOCKERHUB_USER}/${IMAGE_NAME}:latest"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps { checkout scm }
+    environment {
+        DOCKER_IMAGE = "your-dockerhub-username/react-ios-calculator"
+        DOCKER_TAG = "latest"
     }
 
-    stage('Build Docker Image') {
-      steps {
-        sh 'docker build -t $IMAGE -t $LATEST .'
-      }
-    }
+    stages {
 
-    stage('Push to Docker Hub') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DU', passwordVariable: 'DP')]) {
-          sh '''
-            echo "$DP" | docker login -u "$DU" --password-stdin
-            docker push $IMAGE
-            docker push $LATEST
-          '''
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
-      }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Build App') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+            }
+        }
+
+        stage('Login to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            }
+        }
+
     }
 
-    stage('Deploy to Kubernetes') {
-      steps {
-        sh '''
-          kubectl apply -f k8s/
-          kubectl set image deployment/react-ios-calculator web=$IMAGE
-          kubectl rollout status deployment/react-ios-calculator
-        '''
-      }
+    post {
+        always {
+            cleanWs()
+        }
     }
-  }
 }
+
