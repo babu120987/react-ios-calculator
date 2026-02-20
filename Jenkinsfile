@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "babu120987/react-ios-calculator"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG    = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -21,19 +21,19 @@ pipeline {
             }
         }
 
-stage('Login to DockerHub') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-credentials',
-            usernameVariable: 'sarvah031220',
-            passwordVariable: 'N0tguess@ble'
-        )]) {
-            sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            '''
+        stage('Login to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKERHUB_USERNAME',
+                    passwordVariable: 'DOCKERHUB_PASSWORD'
+                )]) {
+                    sh '''
+                        echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Push Image') {
             steps {
@@ -44,34 +44,12 @@ stage('Login to DockerHub') {
         stage('Update Kubernetes Deployment') {
             steps {
                 sh """
-                kubectl set image deployment/react-ios-app \
-                react-ios-app=${DOCKER_IMAGE}:${IMAGE_TAG}
+                    kubectl set image deployment/react-ios-app \
+                    react-ios-app=${DOCKER_IMAGE}:${IMAGE_TAG}
                 """
             }
         }
 
         stage('Verify Rollout') {
             steps {
-                sh "kubectl rollout status deployment/react-ios-app"
-            }
-        }
-stage('Login to DockerHub') {
-  steps {
-    withCredentials([usernamePassword(
-      credentialsId: 'dockerhub-credentials',
-      usernameVariable: 'sarvah031220',
-      passwordVariable: 'N0tguess@ble'
-    )]) {
-      sh '''
-        echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-      '''
-    }
-  }
-}
-
-    post {
-        always {
-            cleanWs()
-        }
-    }
-}
+                sh "kubectl rollout s
