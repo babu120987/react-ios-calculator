@@ -8,6 +8,7 @@ pipeline {
 
     stages {
 
+<<<<<<< HEAD
         stage('Clone Repository') {
             steps {
                 git branch: 'main',
@@ -55,7 +56,21 @@ stage('Login to DockerHub') {
                 sh "kubectl rollout status deployment/react-ios-app"
             }
         }
+=======
+stage('Login to DockerHub') {
+  steps {
+    withCredentials([usernamePassword(
+      credentialsId: 'dockerhub-credentials',
+      usernameVariable: 'DOCKERHUB_USERNAME',
+      passwordVariable: 'DOCKERHUB_PASSWORD'
+    )]) {
+      sh '''
+        echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      '''
+>>>>>>> e312392 (jenkin)
     }
+  }
+}
 
     post {
         always {
